@@ -1,7 +1,7 @@
 const express = require("express");
-const MongoClient = require("mongodb").MongoClient;
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const session = require("express-session");
 const User = require("./models/user");
 const app = express();
 const port = 3000;
@@ -9,6 +9,14 @@ const port = 3000;
 // create connection for mongo using mongoose module
 // if the db do not exists the mongoose creates the db for you
 mongoose.connect("mongodb://localhost:27017/twitterClone");
+
+app.use(
+  session({
+    secret: 'this is secret',
+    resave: false,
+    saveUninitialized: false,
+  })
+);
 
 app.use(express.static("public"));
 app.set("view engine", "ejs");
@@ -88,24 +96,21 @@ app.post("/login", (req, res) => {
     email: email,
   };
 
-  //TODO: in fieldsToBeChecked we have to pass a hashed password
 
   User.find(fieldsToBeChecked).exec((err, foundUser) => {
-    const hashedPassword = foundUser[0].password;
-
-    if (foundUser.length > 0) {
-      console.log("user found");
-      bcrypt.compare(plainPassword, hashedPassword, function (err, result) {
+    if (err) {
+      res.send("invalid data");
+    } else if (foundUser.length > 0) {
+      const hashedPassword = foundUser[0].password;
+      bcrypt.compare(plainPassword, hashedPassword, (err, result) => {
         if (result) {
           res.redirect("/secret");
         } else {
-          res.send(
-            "<h1>your email or password was incorrect so the account was not found in the data base</h1>"
-          );
+          res.redirect("/login");
         }
       });
     } else {
-      console.log("Data not found");
+      res.send("data not found again");
     }
   });
 });
